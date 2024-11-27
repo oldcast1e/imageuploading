@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>이미지 등록</title>
+  <title>이미지 업로드</title>
   <style>
     body {
       font-family: 'Arial', sans-serif;
@@ -22,53 +22,100 @@
     form {
       text-align: center;
     }
-    label {
-      font-weight: bold;
-    }
-    img {
+    #message {
       margin-top: 20px;
-      max-width: 100%;
-      height: auto;
-      border: 1px solid #ccc;
-      border-radius: 10px;
+      font-size: 16px;
+      color: green;
+      display: none;
+    }
+    #error {
+      margin-top: 20px;
+      font-size: 16px;
+      color: red;
+      display: none;
+    }
+    #homeButton {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      display: none;
+    }
+    #homeButton:hover {
+      background-color: #0056b3;
     }
   </style>
 </head>
 <body>
-  <h2>이미지 등록</h2>
-  <form id="imageUploadForm" enctype="multipart/form-data">
-    <label for="imageInput">이미지 선택:</label>
-    <input type="file" id="imageInput" accept="image/*"><br><br>
-    <button type="button" onclick="submitImage()">이미지 업로드</button>
+  <h1>시간표 이미지 업로드</h1>
+  <form id="imageUploadForm">
+      <label for="imageInput">이미지 선택:</label>
+      <input type="file" id="imageInput" accept="image/*" required>
+      <br><br>
+      <button type="button" id="uploadButton">업로드</button>
   </form>
-  <img id="preview" alt="이미지 미리보기" style="display: none;">
+  <p id="responseMessage"></p>
+  <button id="homeButton" style="display: none;">홈으로 이동</button>
 
   <script>
-    const fileInput = document.getElementById("imageInput");
-    const preview = document.getElementById("preview");
+      const uploadButton = document.getElementById('uploadButton');
+      const responseMessage = document.getElementById('responseMessage');
+      const homeButton = document.getElementById('homeButton');
 
-    fileInput.addEventListener("change", () => {
-      const file = fileInput.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          preview.src = e.target.result;
-          preview.style.display = "block";// 이게 이미지 띄우는 코드, 이미지는 fileInput에 있음
-        };
-        reader.readAsDataURL(file);
-      } else {
-        preview.style.display = "none";
-      }
-    });
+      uploadButton.addEventListener('click', async () => {
+          // localStorage에서 userId와 userName 가져오기
+          const userId = localStorage.getItem('userId');
+          const userName = localStorage.getItem('userName');
 
-    function submitImage() {
-      if (fileInput.files.length === 0) {
-        alert("이미지를 선택해 주세요.");
-      } else {
-        alert("이미지가 업로드 되었습니다.");
-        // 서버 업로드 처리 추가 가능
-      }
-    }
+          if (!userId || !userName) {
+              responseMessage.textContent = '로그인 정보가 없습니다. 다시 로그인 해주세요.';
+              responseMessage.style.color = 'red';
+              return;
+          }
+
+          const fileInput = document.getElementById('imageInput');
+          if (fileInput.files.length === 0) {
+              responseMessage.textContent = '이미지를 선택해 주세요.';
+              responseMessage.style.color = 'red';
+              return;
+          }
+
+          const file = fileInput.files[0];
+          const formData = new FormData();
+          formData.append('userId', userId);
+          formData.append('userName', userName);
+          formData.append('image', file);
+
+          try {
+              // 서버로 POST 요청 보내기
+              const response = await fetch('http://192.168.219.100:5002/upload-image', {
+                  method: 'POST',
+                  body: formData,
+              });
+
+              if (response.ok) {
+                  const data = await response.json();
+                  responseMessage.textContent = '이미지 업로드 성공!';
+                  responseMessage.style.color = 'green';
+                  homeButton.style.display = 'block'; // 홈 버튼 표시
+              } else {
+                  const errorData = await response.json();
+                  throw new Error(errorData.message || '서버 오류');
+              }
+          } catch (error) {
+              console.error('Error:', error.message);
+              responseMessage.textContent = `업로드 실패: ${error.message}`;
+              responseMessage.style.color = 'red';
+          }
+      });
+
+      homeButton.addEventListener('click', () => {
+          window.location.href = 'main.html'; // 홈 페이지로 이동
+      });
   </script>
 </body>
 </html>
